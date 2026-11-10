@@ -120,35 +120,59 @@ function copyPixKey() {
   const pixKeyText = document.getElementById("pix-key").innerText;
   if (!pixKeyText || pixKeyText === "Chave não configurada") return;
 
-  // Cria um elemento de input temporário invisível
-  const tempInput = document.createElement("input");
-  tempInput.value = pixKeyText;
-  document.body.appendChild(tempInput);
+  // Tenta o método moderno primeiro
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(pixKeyText).then(() => {
+      showCopyFeedback();
+    }).catch(() => {
+      // Se falhar, usa o método alternativo de input oculto
+      fallbackCopyText(pixKeyText);
+    });
+  } else {
+    // Para navegadores mais antigos que não suportam clipboard API
+    fallbackCopyText(pixKeyText);
+  }
+}
+
+// Método alternativo infalível para telemóveis restritos
+function fallbackCopyText(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
   
-  // Seleciona e copia o texto
-  tempInput.select();
-  tempInput.setSelectionRange(0, 99999); // Para dispositivos móveis
+  // Posiciona fora da tela para evitar scroll automático no telemóvel
+  textArea.style.position = "fixed";
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.opacity = "0";
+  
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
 
   try {
-    const successful = document.execCommand("copy");
-    document.body.removeChild(tempInput);
-
+    const successful = document.execCommand('copy');
     if (successful) {
-      const feedback = document.getElementById("copy-feedback");
-      if (feedback) {
-        feedback.style.display = "block";
-        setTimeout(() => {
-          feedback.style.display = "none";
-        }, 2500);
-      } else {
-        alert("Chave Pix copiada com sucesso!");
-      }
+      showCopyFeedback();
     } else {
-      alert("Não foi possível copiar automaticamente. Selecione o texto manualmente.");
+      alert("Chave Pix: " + text);
     }
   } catch (err) {
-    document.body.removeChild(tempInput);
-    alert("Erro ao copiar. Selecione a chave manualmente.");
+    alert("Chave Pix: " + text);
+  }
+
+  document.body.removeChild(textArea);
+}
+
+// Exibe o aviso verde de sucesso
+function showCopyFeedback() {
+  const feedback = document.getElementById("copy-feedback");
+  if (feedback) {
+    feedback.style.display = "block";
+    setTimeout(() => {
+      feedback.style.display = "none";
+    }, 2500);
+  } else {
+    alert("Chave Pix copiada com sucesso!");
   }
 }
 
