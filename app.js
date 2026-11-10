@@ -120,19 +120,36 @@ function copyPixKey() {
   const pixKeyText = document.getElementById("pix-key").innerText;
   if (!pixKeyText || pixKeyText === "Chave não configurada") return;
 
-  navigator.clipboard.writeText(pixKeyText).then(() => {
-    const feedback = document.getElementById("copy-feedback");
-    if (feedback) {
-      feedback.style.display = "block";
-      setTimeout(() => {
-        feedback.style.display = "none";
-      }, 2500);
+  // Cria um elemento de input temporário invisível
+  const tempInput = document.createElement("input");
+  tempInput.value = pixKeyText;
+  document.body.appendChild(tempInput);
+  
+  // Seleciona e copia o texto
+  tempInput.select();
+  tempInput.setSelectionRange(0, 99999); // Para dispositivos móveis
+
+  try {
+    const successful = document.execCommand("copy");
+    document.body.removeChild(tempInput);
+
+    if (successful) {
+      const feedback = document.getElementById("copy-feedback");
+      if (feedback) {
+        feedback.style.display = "block";
+        setTimeout(() => {
+          feedback.style.display = "none";
+        }, 2500);
+      } else {
+        alert("Chave Pix copiada com sucesso!");
+      }
     } else {
-      alert("Chave Pix copiada com sucesso!");
+      alert("Não foi possível copiar automaticamente. Selecione o texto manualmente.");
     }
-  }).catch(err => {
-    alert("Erro ao copiar chave automaticamente. Selecione manualmente.");
-  });
+  } catch (err) {
+    document.body.removeChild(tempInput);
+    alert("Erro ao copiar. Selecione a chave manualmente.");
+  }
 }
 
 async function reportPayment() {
