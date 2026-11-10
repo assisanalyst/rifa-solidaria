@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbz9iEzI4JjS_48GZnqzfLS8fRTF8Jd4tVp8R21sMkhp4ethO5c5c89Kl9f9iUmWk57T/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyKspzEjiGUwr6uIclzVZTBT-ZQYVJV6D6PYJqVcdIsGWLG4XRDAd93PnZ52VnBfQFPNA/exec"; // Substitua pela sua URL correta do Apps Script
 let selectedNumbers = [];
 let ticketPrice = 15.00;
 let cachedNumbersData = [];
@@ -137,7 +137,6 @@ async function reportPayment() {
   }
 }
 
-// PAINEL ADMINISTRATIVO COM SENHA EM MEMÓRIA (NÃO PEDE A CADA CLIQUE)
 async function loginAdmin() {
   if (!adminTokenCache) {
     const token = prompt("Digite a senha de acesso administrativo:");
@@ -150,7 +149,7 @@ async function loginAdmin() {
     const data = await res.json();
     
     if (!data.success) {
-      adminTokenCache = ""; // Limpa cache se a senha estiver incorreta
+      adminTokenCache = "";
       alert(data.error || "Senha incorreta.");
       return;
     }
@@ -206,7 +205,7 @@ async function confirmPay(orderId) {
   });
   const data = await res.json();
   if (data.success) {
-    loginAdmin(); // Atualiza a tela instantaneamente sem pedir senha
+    loginAdmin();
   } else {
     alert("Erro ao confirmar: " + (data.error || "Tente novamente"));
   }
@@ -220,7 +219,7 @@ async function cancelOrderAction(orderId) {
   });
   const data = await res.json();
   if (data.success) {
-    loginAdmin(); // Atualiza a tela instantaneamente sem pedir senha
+    loginAdmin();
   } else {
     alert("Erro ao cancelar pedido.");
   }
@@ -241,18 +240,15 @@ async function resetDatabaseAction() {
   }
 }
 
-// GERADOR DE IMAGEM DA CARTELA CORRIGIDO (SEM CORTES E ALINHADO PARA WHATSAPP)
 function generateRaffleImage() {
   const canvas = document.createElement("canvas");
   canvas.width = 800;
-  canvas.height = 1950; // Altura expandida para caber todos os 200 números com folga
+  canvas.height = 1950;
   const ctx = canvas.getContext("2d");
 
-  // Fundo Geral
   ctx.fillStyle = "#f8fafc";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Cabeçalho
   ctx.fillStyle = "#4f46e5";
   ctx.fillRect(0, 0, canvas.width, 160);
 
@@ -264,7 +260,6 @@ function generateRaffleImage() {
   ctx.font = "20px sans-serif";
   ctx.fillText("Situação Atualizada das Cotas", canvas.width / 2, 115);
 
-  // Legenda
   let legendY = 210;
   ctx.font = "16px sans-serif";
   
@@ -277,7 +272,6 @@ function generateRaffleImage() {
   ctx.fillStyle = "#ef4444"; ctx.fillRect(570, legendY - 14, 20, 20);
   ctx.fillStyle = "#334155"; ctx.fillText("Pago / Vendido", 600, legendY);
 
-  // Grade de Números (10 colunas x 20 linhas para 200 números)
   let startX = 45;
   let startY = 270;
   let cols = 10;
@@ -290,7 +284,6 @@ function generateRaffleImage() {
     let x = startX + col * (size + gap);
     let y = startY + row * (size + gap);
 
-    // Cores dos blocos
     if (item.status === "PAID") {
       ctx.fillStyle = "#fee2e2";
       ctx.strokeStyle = "#ef4444";
@@ -305,7 +298,6 @@ function generateRaffleImage() {
     ctx.fillRect(x, y, size, size);
     ctx.strokeRect(x, y, size, size);
 
-    // Texto do número
     ctx.fillStyle = item.status === "AVAILABLE" ? "#1e293b" : (item.status === "PAID" ? "#991b1b" : "#92400e");
     ctx.font = "bold 16px sans-serif";
     ctx.textAlign = "center";
@@ -313,13 +305,11 @@ function generateRaffleImage() {
     ctx.fillText(item.number, x + size / 2, y + size / 2);
   });
 
-  // Rodapé (posicionado bem abaixo da última linha da grade, sem risco de corte)
   ctx.fillStyle = "#1e293b";
   ctx.font = "bold 22px sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("Garanta já o seu número da sorte!", canvas.width / 2, 1890);
 
-  // Download automático da imagem limpa e corrigida
   const link = document.createElement("a");
   link.download = "cartela-rifa-atualizada.png";
   link.href = canvas.toDataURL("image/png");
