@@ -240,43 +240,56 @@ async function resetDatabaseAction() {
   }
 }
 
+// GERADOR DE IMAGEM DA CARTELA PREMIUM (DESIGN MODERNO PARA WHATSAPP)
 function generateRaffleImage() {
   const canvas = document.createElement("canvas");
-  canvas.width = 800;
-  canvas.height = 1950;
+  canvas.width = 1080;  
+  canvas.height = 1920; // Altura corrigida e ideal para caber tudo sem sobreposição
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#f8fafc";
+  // 1. Fundo Gradiente Escuro Sofisticado
+  const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bgGradient.addColorStop(0, "#0f172a");  
+  bgGradient.addColorStop(1, "#1e1b4b");
+  ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.fillStyle = "#4f46e5";
-  ctx.fillRect(0, 0, canvas.width, 160);
-
+  // 2. Cabeçalho Minimalista
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 36px sans-serif";
+  ctx.font = "bold 40px sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("RIFA SOLIDÁRIA", canvas.width / 2, 65);
+  ctx.fillText("📊 STATUS ATUAL DAS COTAS", canvas.width / 2, 75);
 
-  ctx.font = "20px sans-serif";
-  ctx.fillText("Situação Atualizada das Cotas", canvas.width / 2, 115);
+  ctx.font = "500 20px sans-serif";
+  ctx.fillStyle = "#94a3b8";
+  ctx.fillText("Acompanhe os números disponíveis em tempo real", canvas.width / 2, 115);
 
-  let legendY = 210;
-  ctx.font = "16px sans-serif";
+  // 3. Legenda Compacta
+  let legendY = 175;
+  ctx.font = "bold 16px sans-serif";
   
-  ctx.fillStyle = "#cbd5e1"; ctx.fillRect(100, legendY - 14, 20, 20);
-  ctx.fillStyle = "#334155"; ctx.textAlign = "left"; ctx.fillText("Livre", 130, legendY);
+  // Livre
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath(); ctx.roundRect(220, legendY - 12, 18, 18, 4); ctx.fill();
+  ctx.fillStyle = "#cbd5e1"; ctx.textAlign = "left"; ctx.fillText("LIVRE", 248, legendY);
 
-  ctx.fillStyle = "#f59e0b"; ctx.fillRect(330, legendY - 14, 20, 20);
-  ctx.fillStyle = "#334155"; ctx.fillText("Reservado", 360, legendY);
+  // Reservado
+  ctx.fillStyle = "#f59e0b";
+  ctx.beginPath(); ctx.roundRect(470, legendY - 12, 18, 18, 4); ctx.fill();
+  ctx.fillStyle = "#cbd5e1"; ctx.fillText("RESERVADO", 498, legendY);
 
-  ctx.fillStyle = "#ef4444"; ctx.fillRect(570, legendY - 14, 20, 20);
-  ctx.fillStyle = "#334155"; ctx.fillText("Pago / Vendido", 600, legendY);
+  // Pago
+  ctx.fillStyle = "#ef4444";
+  ctx.beginPath(); ctx.roundRect(740, legendY - 12, 18, 18, 4); ctx.fill();
+  ctx.fillStyle = "#cbd5e1"; ctx.fillText("PAGO", 768, legendY);
 
-  let startX = 45;
-  let startY = 270;
+  // 4. Grade de Números (10 Colunas x 20 Linhas - Perfeitamente posicionada)
   let cols = 10;
-  let size = 66;
-  let gap = 6;
+  let size = 68; 
+  let gap = 10;
+  let totalGridWidth = (cols * size) + ((cols - 1) * gap);
+  let startX = (canvas.width - totalGridWidth) / 2;
+  let startY = 230; // Ajustado para dar espaço perfeito no topo
 
   cachedNumbersData.forEach((item, index) => {
     let col = index % cols;
@@ -284,34 +297,39 @@ function generateRaffleImage() {
     let x = startX + col * (size + gap);
     let y = startY + row * (size + gap);
 
+    ctx.beginPath();
+    ctx.roundRect(x, y, size, size, 10);
+
     if (item.status === "PAID") {
-      ctx.fillStyle = "#fee2e2";
-      ctx.strokeStyle = "#ef4444";
+      ctx.fillStyle = "#ef4444";
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
     } else if (item.status === "RESERVED") {
-      ctx.fillStyle = "#fef3c7";
-      ctx.strokeStyle = "#f59e0b";
+      ctx.fillStyle = "#f59e0b";
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
     } else {
       ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = "#cbd5e1";
+      ctx.fill();
+      ctx.fillStyle = "#0f172a";
     }
 
-    ctx.fillRect(x, y, size, size);
-    ctx.strokeRect(x, y, size, size);
-
-    ctx.fillStyle = item.status === "AVAILABLE" ? "#1e293b" : (item.status === "PAID" ? "#991b1b" : "#92400e");
-    ctx.font = "bold 16px sans-serif";
+    // Texto do Número
+    ctx.font = "bold 20px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(item.number, x + size / 2, y + size / 2);
   });
 
-  ctx.fillStyle = "#1e293b";
-  ctx.font = "bold 22px sans-serif";
+  // 5. Rodapé Informativo Posicionado com Folga Segura (Sem cortar o 191-200)
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "500 18px sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("Garanta já o seu número da sorte!", canvas.width / 2, 1890);
+  ctx.fillText("🔗 Consulte o link da mensagem principal para garantir sua cota!", canvas.width / 2, 1860);
 
+  // Download Automático da Imagem Ajustada
   const link = document.createElement("a");
-  link.download = "cartela-rifa-atualizada.png";
+  link.download = `status-cotas-${new Date().toISOString().slice(0,10)}.png`;
   link.href = canvas.toDataURL("image/png");
   link.click();
 }
