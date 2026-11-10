@@ -21,7 +21,10 @@
       <div class="legend-item"><span class="dot paid"></span> Pago</div>
     </div>
 
-    <div class="grid" id="numbers-grid"></div>
+    <!-- Container com efeito visual de rolagem -->
+    <div class="grid-wrapper">
+      <div class="grid" id="numbers-grid"></div>
+    </div>
 
     <div class="summary-card">
       <div>Selecionados: <span id="selected-count" style="font-weight:700;">0</span></div>
@@ -61,11 +64,9 @@
 
       <div style="margin: 12px 0;">
         <span class="pix-label" style="display: block; margin-bottom: 4px;">Chave Pix (Toque para copiar):</span>
-        <!-- Caixa com evento de clique e indicador visual de toque -->
         <div class="pix-key-box" onclick="copyPixKey()" style="cursor: pointer;" title="Clique para copiar">
           <span id="pix-key" style="font-family: monospace; font-size: 14px; font-weight: bold; color: #1e293b; word-break: break-all;"></span>
         </div>
-        <!-- Aviso visual discreto que surge ao copiar -->
         <div id="copy-feedback" style="font-size: 11px; color: #059669; text-align: center; margin-top: 4px; font-weight: 600; display: none;">✓ Chave Pix copiada com sucesso!</div>
       </div>
 
