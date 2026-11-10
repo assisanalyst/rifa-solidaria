@@ -85,14 +85,34 @@ body {
 .dot.reserved { background: #f59e0b; }
 .dot.paid { background: #ef4444; }
 
+/* Wrapper para criar a ilusão visual de sombra/fade na base */
+.grid-wrapper {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.grid-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 35px;
+  background: linear-gradient(to bottom, rgba(250, 250, 250, 0), rgba(250, 250, 250, 0.95));
+  pointer-events: none;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 6px;
-  max-height: 260px;
+  max-height: 232px; /* Ajustado para deixar a última linha visível cortada ao meio */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 0;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fafafa;
