@@ -1,4 +1,4 @@
-const API_URL = "SUA_URL_DO_WEB_APP_AQUI"; // Mantenha a sua URL do Google Apps Script aqui
+const API_URL = "https://script.google.com/macros/s/AKfycbyKspzEjiGUwr6uIclzVZTBT-ZQYVJV6D6PYJqVcdIsGWLG4XRDAd93PnZ52VnBfQFPNA/exec"; // Mantenha a sua URL do Google Apps Script aqui
 let selectedNumbers = [];
 let ticketPrice = 15.00;
 let cachedNumbersData = [];
