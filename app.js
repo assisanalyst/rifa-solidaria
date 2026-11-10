@@ -241,6 +241,7 @@ async function resetDatabaseAction() {
 }
 
 // GERADOR DE IMAGEM DA CARTELA PREMIUM (DESIGN MODERNO PARA WHATSAPP)
+// GERADOR DE MAPA DE STATUS LIMPO E COMPACTO (ALTURA CORRIGIDA)
 function generateRaffleImage() {
   const canvas = document.createElement("canvas");
   canvas.width = 1080;  
