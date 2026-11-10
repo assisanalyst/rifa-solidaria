@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbyKspzEjiGUwr6uIclzVZTBT-ZQYVJV6D6PYJqVcdIsGWLG4XRDAd93PnZ52VnBfQFPNA/exec"; // Substitua pela sua URL correta do Apps Script
+const API_URL = "SUA_URL_DO_WEB_APP_AQUI"; // Mantenha a sua URL do Google Apps Script aqui
 let selectedNumbers = [];
 let ticketPrice = 15.00;
 let cachedNumbersData = [];
@@ -115,6 +115,26 @@ async function submitReservation() {
   }
 }
 
+// FUNÇÃO DE TOQUE PARA COPIAR A CHAVE PIX NO CELULAR
+function copyPixKey() {
+  const pixKeyText = document.getElementById("pix-key").innerText;
+  if (!pixKeyText || pixKeyText === "Chave não configurada") return;
+
+  navigator.clipboard.writeText(pixKeyText).then(() => {
+    const feedback = document.getElementById("copy-feedback");
+    if (feedback) {
+      feedback.style.display = "block";
+      setTimeout(() => {
+        feedback.style.display = "none";
+      }, 2500);
+    } else {
+      alert("Chave Pix copiada com sucesso!");
+    }
+  }).catch(err => {
+    alert("Erro ao copiar chave automaticamente. Selecione manualmente.");
+  });
+}
+
 async function reportPayment() {
   if (!window.currentOrderId) {
     alert("ID do pedido não encontrado.");
@@ -157,7 +177,7 @@ async function loginAdmin() {
     let html = `<h2>Painel do Organizador</h2>
       <p style="font-size:12px; color:#64748b; text-align:center;">Gerenciamento Geral da Rifa</p>
       
-      <button onclick="generateRaffleImage()" style="background:#4f46e5; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; margin: 12px 0;">📱 Gerar Imagem da Cartela para WhatsApp</button>
+      <button onclick="generateRaffleImage()" style="background:#4f46e5; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; margin: 12px 0;">📱 Gerar Mapa de Status para WhatsApp</button>
       <hr style="border:0; border-top:1px solid #e2e8f0; margin:12px 0;">`;
     
     if (data.orders.length === 0) {
@@ -240,12 +260,11 @@ async function resetDatabaseAction() {
   }
 }
 
-// GERADOR DE IMAGEM DA CARTELA PREMIUM (DESIGN MODERNO PARA WHATSAPP)
-// GERADOR DE MAPA DE STATUS LIMPO E COMPACTO (ALTURA CORRIGIDA)
+// GERADOR DE MAPA DE STATUS LIMPO (SEM CORTES)
 function generateRaffleImage() {
   const canvas = document.createElement("canvas");
   canvas.width = 1080;  
-  canvas.height = 1920; // Altura corrigida e ideal para caber tudo sem sobreposição
+  canvas.height = 1920; // Altura corrigida com espaço de sobra para não cortar nada
   const ctx = canvas.getContext("2d");
 
   // 1. Fundo Gradiente Escuro Sofisticado
@@ -284,13 +303,13 @@ function generateRaffleImage() {
   ctx.beginPath(); ctx.roundRect(740, legendY - 12, 18, 18, 4); ctx.fill();
   ctx.fillStyle = "#cbd5e1"; ctx.fillText("PAGO", 768, legendY);
 
-  // 4. Grade de Números (10 Colunas x 20 Linhas - Perfeitamente posicionada)
+  // 4. Grade de Números (10 Colunas x 20 Linhas)
   let cols = 10;
   let size = 68; 
   let gap = 10;
   let totalGridWidth = (cols * size) + ((cols - 1) * gap);
   let startX = (canvas.width - totalGridWidth) / 2;
-  let startY = 230; // Ajustado para dar espaço perfeito no topo
+  let startY = 230;
 
   cachedNumbersData.forEach((item, index) => {
     let col = index % cols;
@@ -322,7 +341,7 @@ function generateRaffleImage() {
     ctx.fillText(item.number, x + size / 2, y + size / 2);
   });
 
-  // 5. Rodapé Informativo Posicionado com Folga Segura (Sem cortar o 191-200)
+  // 5. Rodapé Informativo Posicionado com Folga Segura
   ctx.fillStyle = "#94a3b8";
   ctx.font = "500 18px sans-serif";
   ctx.textAlign = "center";
