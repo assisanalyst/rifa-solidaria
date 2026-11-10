@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rifa Solidária</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container" id="step-selection">
+    <h1 id="raffle-title">Carregando Rifa...</h1>
+    <p style="text-align:center;">Valor da cota: R$ <span id="ticket-price">0.00</span></p>
+    
+    <div class="legend">
+      <span><span style="color:#e2e8f0;">■</span> Livre</span>
+      <span><span style="color:#ecc94b;">■</span> Reservado</span>
+      <span><span style="color:#e53e3e;">■</span> Pago</span>
+    </div>
+
+    <div class="grid" id="numbers-grid"></div>
+
+    <div class="form-group">
+      <label>Seu Nome Completo:</label>
+      <input type="text" id="cust-name" placeholder="Digite seu nome">
+    </div>
+    
+    <div class="form-group">
+      <label>Seu WhatsApp:</label>
+      <input type="text" id="cust-phone" placeholder="(00) 00000-0000">
+    </div>
+
+    <button class="primary" onclick="submitReservation()">
+      Reservar (<span id="selected-count">0</span> números)
+    </button>
+    
+    <br><br>
+    <button style="width:100%; border:none; background:none; color:#718096; cursor:pointer;" onclick="loginAdmin()">Área do Organizador</button>
+  </div>
+
+  <div class="container" id="step-pix" style="display:none;">
+    <h2>Reserva Realizada!</h2>
+    <p>Realize o pagamento para garantir seus números:</p>
+    <div class="box-pix">
+      <p><b>Valor Total:</b> R$ <span id="pix-total">0.00</span></p>
+      <p><b>Chave Pix:</b> <span id="pix-key"></span></p>
+      <p><b>Favorecido:</b> <span id="pix-receiver"></span></p>
+    </div>
+    <br>
+    <button class="primary" onclick="reportPayment()">Já fiz o Pix</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

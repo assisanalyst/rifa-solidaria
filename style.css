@@ -1,0 +1,14 @@
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }
+.container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+h1, h2 { text-align: center; color: #333; }
+.grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
+.num-btn { padding: 12px 0; text-align: center; background: #e2e8f0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+.num-btn.selected { background: #3182ce; color: white; }
+.num-btn.reserved { background: #ecc94b; color: #744210; cursor: not-allowed; }
+.num-btn.paid { background: #e53e3e; color: white; cursor: not-allowed; }
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+.form-group input { width: 100%; padding: 10px; box-sizing: border-box; border: 1fr solid #ccc; border-radius: 6px; }
+button.primary { width: 100%; padding: 12px; background: #38a169; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+.legend { display: flex; justify-content: space-around; margin-bottom: 15px; font-size: 12px; }
+.box-pix { background: #edf2f7; padding: 15px; border-radius: 8px; text-align: center; }
