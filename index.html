@@ -9,45 +9,80 @@
 <body>
 
   <div class="container" id="step-selection">
-    <h1 id="raffle-title">Carregando Rifa...</h1>
-    <p style="text-align:center;">Valor da cota: R$ <span id="ticket-price">0.00</span></p>
+    <div class="hero-box">
+      <h1 id="raffle-title">Rifa Solidária</h1>
+      <p>Escolha seus números da sorte e apoie nossa causa!</p>
+      <div class="badge-price">R$ <span id="ticket-price">15.00</span> por cota</div>
+    </div>
     
     <div class="legend">
-      <span><span style="color:#e2e8f0;">■</span> Livre</span>
-      <span><span style="color:#ecc94b;">■</span> Reservado</span>
-      <span><span style="color:#e53e3e;">■</span> Pago</span>
+      <div class="legend-item"><span class="dot free"></span> Livre</div>
+      <div class="legend-item"><span class="dot reserved"></span> Reservado</div>
+      <div class="legend-item"><span class="dot paid"></span> Pago</div>
     </div>
 
     <div class="grid" id="numbers-grid"></div>
 
-    <div class="form-group">
-      <label>Seu Nome Completo:</label>
-      <input type="text" id="cust-name" placeholder="Digite seu nome">
-    </div>
-    
-    <div class="form-group">
-      <label>Seu WhatsApp:</label>
-      <input type="text" id="cust-phone" placeholder="(00) 00000-0000">
+    <div class="summary-card">
+      <div>Selecionados: <span id="selected-count" style="font-weight:700;">0</span></div>
+      <div>Total: <b>R$ <span id="selected-total">0.00</span></b></div>
     </div>
 
-    <button class="primary" onclick="submitReservation()">
-      Reservar (<span id="selected-count">0</span> números)
+    <div class="form-group">
+      <label>Seu Nome Completo</label>
+      <input type="text" id="cust-name" placeholder="Ex: Maria Silva">
+    </div>
+    
+    <div class="form-group">
+      <label>Seu WhatsApp</label>
+      <input type="tel" id="cust-phone" placeholder="Ex: (11) 98765-4321">
+    </div>
+
+    <button class="primary" id="btn-reserve" onclick="submitReservation()">
+      Garantir Meus Números
     </button>
     
-    <br><br>
-    <button style="width:100%; border:none; background:none; color:#718096; cursor:pointer;" onclick="loginAdmin()">Área do Organizador</button>
+    <button class="admin-link" onclick="loginAdmin()">🔒 Área do Organizador</button>
   </div>
 
   <div class="container" id="step-pix" style="display:none;">
-    <h2>Reserva Realizada!</h2>
-    <p>Realize o pagamento para garantir seus números:</p>
-    <div class="box-pix">
-      <p><b>Valor Total:</b> R$ <span id="pix-total">0.00</span></p>
-      <p><b>Chave Pix:</b> <span id="pix-key"></span></p>
-      <p><b>Favorecido:</b> <span id="pix-receiver"></span></p>
+    <div class="hero-box" style="margin-bottom: 16px;">
+      <h1 style="color: #059669; font-size: 20px; margin-bottom: 4px;">Reserva Realizada! 🎉</h1>
+      <p style="font-size: 13px;">Seus números: <b id="pix-numbers" style="color: #0f172a; font-size: 15px;"></b></p>
     </div>
-    <br>
-    <button class="primary" onclick="reportPayment()">Já fiz o Pix</button>
+
+    <div class="box-pix">
+      <div style="font-weight: 700; color: #047857; margin-bottom: 12px; font-size: 14px; text-align: center;">Dados para Pagamento via Pix</div>
+      
+      <div class="pix-row">
+        <span class="pix-label">Valor Total:</span>
+        <span class="pix-value" style="color: #047857; font-size: 16px;">R$ <span id="pix-total">0.00</span></span>
+      </div>
+
+      <div style="margin: 12px 0;">
+        <span class="pix-label" style="display: block; margin-bottom: 4px;">Chave Pix (Toque para selecionar):</span>
+        <div class="pix-key-box">
+          <span id="pix-key" style="font-family: monospace; font-size: 14px; font-weight: bold; color: #1e293b; user-select: all; word-break: break-all;"></span>
+        </div>
+      </div>
+
+      <div class="pix-row">
+        <span class="pix-label">Favorecido:</span>
+        <span class="pix-value" id="pix-receiver"></span>
+      </div>
+
+      <div class="pix-row" style="margin-top: 10px;">
+        <span class="pix-label">Instituição:</span>
+        <span class="pix-value" id="pix-bank"></span>
+      </div>
+    </div>
+
+    <p style="font-size: 12px; color: #64748b; text-align: center; margin-bottom: 18px; line-height: 1.5;">
+      Copie a chave Pix acima, realize o pagamento no aplicativo do seu banco e clique no botão verde para enviar o aviso ao organizador.
+    </p>
+
+    <button class="primary" onclick="reportPayment()" style="background: #059669; margin-bottom: 10px;">Já fiz o Pix, Avisar Organizador</button>
+    <button class="admin-link" onclick="location.reload()">Voltar ao início</button>
   </div>
 
   <script src="app.js"></script>
