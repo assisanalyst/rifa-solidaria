@@ -1,94 +1,748 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="antialiased">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rifa Solidária</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Rifa Solidária</title>
+    
+    <!-- Tipografia da interface -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Biblioteca de estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    colors: {
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                            950: '#022c22',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Biblioteca de interatividade -->
+
+    <link rel="stylesheet" href="assets/css/styles.css">
 </head>
-<body>
+<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col font-sans transition-colors duration-200" x-data="raffleApp()">
 
-  <div class="container" id="step-selection">
-    <div class="hero-box">
-      <h1 id="raffle-title">Rifa Solidária</h1>
-      <p>Escolha seus números e apoie uma boa causa!</p>
-      <div class="badge-price">R$ <span id="ticket-price">15.00</span> por cota</div>
-    </div>
-    
-    <div class="legend">
-      <div class="legend-item"><span class="dot free"></span> Livre</div>
-      <div class="legend-item"><span class="dot reserved"></span> Reservado</div>
-      <div class="legend-item"><span class="dot paid"></span> Pago</div>
-    </div>
-
-    <!-- Container com efeito visual de rolagem -->
-    <div class="grid-wrapper">
-      <div class="grid" id="numbers-grid"></div>
-    </div>
-
-    <div class="summary-card">
-      <div>Selecionados: <span id="selected-count" style="font-weight:700;">0</span></div>
-      <div>Total: <b>R$ <span id="selected-total">0.00</span></b></div>
-    </div>
-
-    <div class="form-group">
-      <label>Seu Nome Completo</label>
-      <input type="text" id="cust-name" placeholder="Ex: Maria Silva">
-    </div>
-    
-    <div class="form-group">
-      <label>Seu WhatsApp</label>
-      <input type="tel" id="cust-phone" placeholder="Ex: (11) 98765-4321">
+    <!-- Mensagens de retorno ao usuário -->
+    <div class="fixed top-4 right-4 left-4 sm:left-auto sm:w-96 z-[60] flex flex-col gap-2 pointer-events-none" aria-live="polite" aria-relevant="additions text">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 -translate-y-2 scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 role="status" class="pointer-events-auto flex items-start gap-3 p-4 rounded-2xl shadow-2xl border text-sm font-semibold backdrop-blur-md"
+                 :class="{
+                     'bg-white/95 dark:bg-zinc-900/95 border-emerald-400 dark:border-emerald-700 text-zinc-900 dark:text-zinc-100': toast.type === 'success',
+                     'bg-white/95 dark:bg-zinc-900/95 border-rose-400 dark:border-rose-700 text-zinc-900 dark:text-zinc-100': toast.type === 'error',
+                     'bg-white/95 dark:bg-zinc-900/95 border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100': toast.type === 'info'
+                 }">
+                <span class="mt-1 shrink-0 w-2.5 h-2.5 rounded-full"
+                      :class="{
+                          'bg-emerald-600 ring-4 ring-emerald-100 dark:ring-emerald-950': toast.type === 'success',
+                          'bg-rose-600 ring-4 ring-rose-100 dark:ring-rose-950': toast.type === 'error',
+                          'bg-sky-600 ring-4 ring-sky-100 dark:ring-sky-950': toast.type === 'info'
+                      }"></span>
+                <p class="flex-1 leading-snug" x-text="toast.message"></p>
+                <button type="button" @click="dismissToast(toast.id)" aria-label="Fechar notificação" class="text-zinc-400 hover:text-zinc-600 text-xs">✕</button>
+            </div>
+        </template>
     </div>
 
-    <button class="primary" id="btn-reserve" onclick="submitReservation()">
-      Garantir Meus Números
-    </button>
-    
-    <button class="admin-link" onclick="loginAdmin()">🔒 Área do Organizador</button>
-  </div>
+    <!-- Cabeçalho e navegação -->
+    <header class="sticky top-0 z-30 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
+        <div class="max-w-xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0 cursor-pointer select-none" @click="switchTab('rifa')">
+                <div class="w-9 h-9 rounded-xl bg-emerald-700 dark:bg-emerald-600 text-white font-extrabold flex items-center justify-center text-sm shadow-xs shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <span class="font-extrabold text-base text-zinc-900 dark:text-zinc-50 truncate block">Rifa Solidária</span>
+                </div>
+            </div>
 
-  <div class="container" id="step-pix" style="display:none;">
-    <div class="hero-box" style="margin-bottom: 16px;">
-      <h1 style="color: #059669; font-size: 20px; margin-bottom: 4px;">Reserva Realizada! 🎉</h1>
-      <p style="font-size: 13px;">Seus números: <b id="pix-numbers" style="color: #0f172a; font-size: 15px;"></b></p>
-    </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button @click="switchTab('pedidos')" 
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border select-none-touch"
+                        :class="currentTab === 'pedidos' ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-900' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200'">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                    </svg>
+                    <span>Pedidos</span>
+                </button>
 
-    <div class="box-pix">
-      <div style="font-weight: 700; color: #047857; margin-bottom: 12px; font-size: 14px; text-align: center;">Dados para Pagamento via Pix</div>
-      
-      <div class="pix-row">
-        <span class="pix-label">Valor Total:</span>
-        <span class="pix-value" style="color: #047857; font-size: 16px;">R$ <span id="pix-total">0.00</span></span>
-      </div>
-
-      <div style="margin: 12px 0;">
-        <span class="pix-label" style="display: block; margin-bottom: 4px;">Chave Pix (Toque para copiar):</span>
-        <div class="pix-key-box" onclick="copyPixKey()" style="cursor: pointer;" title="Clique para copiar">
-          <span id="pix-key" style="font-family: monospace; font-size: 14px; font-weight: bold; color: #1e293b; word-break: break-all;"></span>
+                <button @click="toggleTheme()" aria-label="Alternar tema" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">
+                    <svg x-show="!darkMode" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                    </svg>
+                    <svg x-show="darkMode" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="4"/>
+                        <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41m14.14-14.14-1.41 1.41"/>
+                    </svg>
+                </button>
+            </div>
         </div>
-        <div id="copy-feedback" style="font-size: 11px; color: #059669; text-align: center; margin-top: 4px; font-weight: 600; display: none;">✓ Chave Pix copiada com sucesso!</div>
-      </div>
+    </header>
 
-      <div class="pix-row">
-        <span class="pix-label">Favorecido:</span>
-        <span class="pix-value" id="pix-receiver"></span>
-      </div>
+    <!-- Conteúdo principal -->
+    <main class="max-w-xl mx-auto px-4 pt-4 pb-36 w-full flex-grow">
 
-      <div class="pix-row" style="margin-top: 10px;">
-        <span class="pix-label">Instituição:</span>
-        <span class="pix-value" id="pix-bank"></span>
-      </div>
+        <!-- Indicador de carregamento -->
+        <div x-show="loading" class="space-y-4 animate-pulse">
+            <div class="h-44 bg-zinc-200 dark:bg-zinc-800 rounded-3xl"></div>
+            <div class="h-14 bg-zinc-200 dark:bg-zinc-800 rounded-2xl"></div>
+            <div class="grid grid-cols-5 gap-2">
+                <template x-for="i in 25" :key="i">
+                    <div class="h-12 bg-zinc-200 dark:bg-zinc-800 rounded-xl"></div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Tela da campanha e seleção de cotas -->
+        <div x-show="!loading && currentTab === 'rifa' && !campaignClosed" x-cloak class="space-y-5">
+
+            <!-- Aviso de reserva pendente -->
+            <template x-if="activePendingOrder">
+                <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 flex items-center justify-between gap-3 shadow-xs">
+                    <div class="min-w-0">
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300 block">Reserva em andamento</span>
+                        <p class="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate mt-0.5">
+                            Você já reservou <strong x-text="activePendingOrder.numbers.split(',').length"></strong> cota(s) nesta campanha
+                        </p>
+                    </div>
+                    <button @click="openOrderView(activePendingOrder.order_id)" 
+                            type="button"
+                            class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shrink-0 shadow-xs transition select-none-touch active:scale-95">
+                        Ver dados para pagamento
+                    </button>
+                </div>
+            </template>
+
+            <!-- Apresentação da campanha -->
+            <section class="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-xs">
+                <template x-if="config.banner_url">
+                    <img :src="config.banner_url" :alt="config.prize || 'Imagem do Prêmio'" class="w-full h-44 sm:h-56 object-cover bg-zinc-100 dark:bg-zinc-800">
+                </template>
+
+                <div class="p-5 space-y-4">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="space-y-1.5 min-w-0">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold border border-emerald-200 dark:border-emerald-800">
+                                <span x-text="formatCurrency(config.ticket_price)"></span><span class="ml-1 font-semibold text-emerald-700 dark:text-emerald-400">por cota</span>
+                            </span>
+                            <h1 class="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-white leading-tight" x-text="config.raffle_name || config.title || 'Campanha Beneficente'"></h1>
+                        </div>
+
+                        <button @click="showRulesModal = true" 
+                                class="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold transition shrink-0 select-none-touch">
+                            Regulamento
+                        </button>
+                    </div>
+
+                    <p x-show="config.description" class="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed font-normal" x-text="config.description"></p>
+
+                    <!-- Progresso das cotas pagas -->
+                    <div class="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                        <div class="flex justify-between items-center text-xs font-semibold">
+                            <span class="text-zinc-600 dark:text-zinc-400">Progresso da campanha</span>
+                            <span class="text-emerald-700 dark:text-emerald-400 font-extrabold" x-text="percentSold + '% das cotas pagas'"></span>
+                        </div>
+                        <div class="w-full h-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-emerald-600 dark:bg-emerald-500 rounded-full transition-all duration-500" :style="'width: ' + percentSold + '%'"></div>
+                        </div>
+                        <div class="flex justify-between items-center text-[11px] text-zinc-600 dark:text-zinc-400 pt-0.5">
+                            <span><strong class="text-zinc-900 dark:text-zinc-100 font-bold" x-text="availableCount"></strong> cotas disponíveis</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seleção rápida de cotas -->
+            <section class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-2.5 shadow-xs">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200">Escolha rápida por quantidade:</span>
+                    <span class="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">Seleção aleatória</span>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    <button @click="selectRandomBatch(1)" class="py-2.5 px-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 font-bold text-xs rounded-xl transition text-zinc-800 dark:text-zinc-200 active:scale-95 border border-zinc-200/60 dark:border-transparent select-none-touch">+1 Cota</button>
+                    <button @click="selectRandomBatch(3)" class="py-2.5 px-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 font-bold text-xs rounded-xl transition text-zinc-800 dark:text-zinc-200 active:scale-95 border border-zinc-200/60 dark:border-transparent select-none-touch">+3 Cotas</button>
+                    <button @click="selectRandomBatch(5)" class="py-2.5 px-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 font-bold text-xs rounded-xl transition text-zinc-800 dark:text-zinc-200 active:scale-95 border border-zinc-200/60 dark:border-transparent select-none-touch">+5 Cotas</button>
+                    <button @click="selectRandomBatch(10)" class="py-2.5 px-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 font-bold text-xs rounded-xl transition text-zinc-800 dark:text-zinc-200 active:scale-95 border border-zinc-200/60 dark:border-transparent select-none-touch">+10 Cotas</button>
+                </div>
+            </section>
+
+            <!-- Filtros e grade de cotas -->
+            <section class="space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <h2 class="text-xs font-extrabold uppercase tracking-wider text-zinc-800 dark:text-zinc-300">
+                        Escolha seus números
+                    </h2>
+                    
+                    <div class="flex items-center gap-1 bg-zinc-200/80 dark:bg-zinc-800 p-0.5 rounded-xl">
+                        <button @click="setFilterMode('AVAILABLE')" 
+                                class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition select-none-touch"
+                                :class="filterMode === 'AVAILABLE' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400'">
+                            Livres (<span x-text="availableCount"></span>)
+                        </button>
+                        <button @click="setFilterMode('ALL')" 
+                                class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition select-none-touch"
+                                :class="filterMode === 'ALL' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs' : 'text-zinc-600 dark:text-zinc-400'">
+                            Todos
+                        </button>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <input type="text" 
+                           x-model="searchNumberQuery" 
+                           placeholder="Buscar uma cota específica (ex.: 7, 42 ou 100)" 
+                           class="w-full px-4 py-2.5 pl-9 text-xs font-semibold rounded-xl bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-2xs">
+                    <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <button x-show="searchNumberQuery" @click="searchNumberQuery = ''" class="absolute right-3 top-2.5 text-xs text-zinc-500 font-bold">Limpar</button>
+                </div>
+
+                <div x-show="pageRanges.length > 1 && !searchNumberQuery" class="flex gap-1.5 overflow-x-auto pb-1 pt-0.5">
+                    <template x-for="(range, idx) in pageRanges" :key="idx">
+                        <button @click="currentRangeIndex = idx" 
+                                class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition border select-none-touch"
+                                :class="currentRangeIndex === idx ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs' : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-800 hover:bg-zinc-100'"
+                                x-text="range.label">
+                        </button>
+                    </template>
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] text-zinc-700 dark:text-zinc-300 px-1 font-medium select-none-touch">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full border-2 border-zinc-400 bg-white dark:bg-zinc-900"></span> Livre</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-700 dark:bg-emerald-500"></span> Selecionada</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Reservada</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600"></span> Paga</span>
+                </div>
+
+                <div x-show="displayedNumbers.length > 0" class="grid grid-cols-5 gap-2 pt-1">
+                    <template x-for="item in displayedNumbers" :key="item.number">
+                        <button 
+                            type="button"
+                            @click="toggleNumber(item)"
+                            :disabled="item.status !== 'AVAILABLE'"
+                            class="h-12 rounded-xl font-bold text-xs sm:text-sm transition-all duration-100 active:scale-90 flex items-center justify-center border select-none-touch"
+                            :class="{
+                                'bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:border-emerald-600 shadow-2xs': item.status === 'AVAILABLE' && !selectedNumbers.includes(item.number),
+                                'bg-emerald-700 dark:bg-emerald-600 border-emerald-800 dark:border-emerald-500 text-white shadow-md scale-[1.04] ring-2 ring-emerald-500/30': selectedNumbers.includes(item.number),
+                                'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-900/60 text-amber-800 dark:text-amber-400 cursor-not-allowed': item.status === 'RESERVED',
+                                'bg-zinc-100 dark:bg-zinc-800/40 border-transparent text-zinc-400 dark:text-zinc-600 cursor-not-allowed line-through': item.status === 'PAID'
+                            }"
+                            x-text="item.number">
+                        </button>
+                    </template>
+                </div>
+            </section>
+        </div>
+
+        <!-- Área de pedidos do participante -->
+        <div x-show="!loading && currentTab === 'pedidos'" x-cloak class="space-y-5">
+            <div class="flex items-center justify-between">
+                <h1 class="text-xl font-extrabold text-zinc-900 dark:text-white">Meus Pedidos</h1>
+                <button x-show="savedOrders.length > 0" 
+                        @click="switchTab('rifa')" 
+                        class="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline select-none-touch">
+                    Escolher mais cotas
+                </button>
+            </div>
+
+            <template x-if="savedOrders.length === 0">
+                <div class="p-8 text-center bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-xs">
+                    <div class="w-14 h-14 mx-auto rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-extrabold text-zinc-900 dark:text-white">Você ainda não fez nenhuma reserva</h2>
+                    </div>
+                    <button @click="switchTab('rifa')" class="px-5 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition active:scale-95 select-none-touch">
+                        Ver cotas disponíveis
+                    </button>
+                </div>
+            </template>
+
+            <template x-if="savedOrders.length > 0">
+                <div class="space-y-3.5">
+                    <template x-for="order in savedOrders" :key="order.order_id">
+                        <div class="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-xs transition">
+                            
+                            <div @click="toggleOrderAccordion(order.order_id)" 
+                                 class="p-4 sm:p-5 space-y-3 cursor-pointer select-none-touch hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30 transition">
+                                
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <strong class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white" x-text="order.name"></strong>
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase"
+                                                  :class="{
+                                                      'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300': order.status === 'PENDING' || order.status === 'RESERVED',
+                                                      'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300': order.status === 'PAYMENT_REPORTED',
+                                                      'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300': order.status === 'PAID',
+                                                      'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400': order.status === 'CANCELLED' || order.status === 'REFUNDED'
+                                                  }" x-text="translateStatus(order.status)"></span>
+                                        </div>
+                                        <div class="text-xs text-zinc-600 dark:text-zinc-400 mt-1 space-y-0.5">
+                                            <p><span class="font-semibold text-zinc-500">WhatsApp:</span> <span x-text="formatPhoneDisplay(order.whatsapp)"></span></p>
+                                            <p><span class="font-semibold text-zinc-500">Nº do pedido:</span> <span class="font-mono font-bold text-zinc-700 dark:text-zinc-300" x-text="shortenOrderId(order.order_id)" :title="order.order_id"></span></p>
+                                        </div>
+                                    </div>
+
+                                    <strong class="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white shrink-0" x-text="formatCurrency(order.total_amount)"></strong>
+                                </div>
+
+                                <div class="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800/80 flex items-center flex-wrap gap-1.5">
+                                    <span class="text-xs font-bold text-zinc-500 mr-1">Cotas:</span>
+                                    <template x-for="num in String(order.numbers || '').split(',').map(s => s.trim()).filter(Boolean)" :key="num">
+                                        <span class="px-2 py-0.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-extrabold text-emerald-700 dark:text-emerald-400 shadow-2xs" x-text="num"></span>
+                                    </template>
+                                </div>
+
+                                <div class="flex items-center justify-between pt-0.5 text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
+                                    <span x-text="isOrderExpanded(order.order_id) ? 'Ocultar detalhes do pagamento' : (order.status === 'PAID' ? 'Ver comprovante oficial' : 'Ver chave Pix e detalhes do pagamento')"></span>
+                                    <svg class="w-4 h-4 transition-transform duration-200" 
+                                         :class="isOrderExpanded(order.order_id) ? 'rotate-180 text-emerald-600' : 'text-zinc-400'"
+                                         fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div x-show="isOrderExpanded(order.order_id)" 
+                                 x-transition:enter="transition ease-out duration-200"
+                                 x-transition:enter-start="opacity-0 -translate-y-2"
+                                 x-transition:enter-end="opacity-100 translate-y-0"
+                                 class="p-4 sm:p-5 pt-4 space-y-4 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/40 dark:bg-zinc-950/30">
+                                
+                                <div class="p-3.5 rounded-2xl border text-xs leading-relaxed font-semibold"
+                                     :class="{
+                                         'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200': order.status === 'PENDING' || order.status === 'RESERVED',
+                                         'bg-sky-50 dark:bg-sky-950/30 border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200': order.status === 'PAYMENT_REPORTED',
+                                         'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200': order.status === 'PAID',
+                                         'bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-300': order.status === 'CANCELLED' || order.status === 'REFUNDED'
+                                     }" x-text="statusDescription(order.status)">
+                                </div>
+
+                                <div x-show="order.status === 'PENDING' || order.status === 'RESERVED' || order.status === 'PAYMENT_REPORTED'" class="space-y-3">
+                                    <div class="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] font-extrabold uppercase tracking-wider text-zinc-500">Chave Pix</span>
+                                        </div>
+                                        
+                                        <div class="flex items-center gap-2">
+                                            <input type="text" readonly :value="config.pix_key" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-zinc-900 dark:text-white select-all">
+                                            <button @click="copyPixKeyUniversal()" 
+                                                    type="button"
+                                                    class="px-4 py-2 rounded-xl font-bold text-xs text-white transition shrink-0 active:scale-95 select-none-touch"
+                                                    :class="pixCopied ? 'bg-emerald-600 shadow-xs' : 'bg-zinc-900 dark:bg-emerald-600 hover:opacity-90'">
+                                                <span x-text="pixCopied ? '✓ Copiado!' : 'Copiar Pix'"></span>
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="text-xs text-zinc-700 dark:text-zinc-300 space-y-0.5 pt-1 border-t border-zinc-200/60 dark:border-zinc-800/60">
+                                            <p x-show="config.pix_receiver">
+                                                Favorecido: <strong class="text-zinc-900 dark:text-white font-bold" x-text="config.pix_receiver"></strong>
+                                            </p>
+                                            <p x-show="config.pix_bank">
+                                                Banco: <strong class="text-zinc-900 dark:text-white font-bold" x-text="config.pix_bank"></strong>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-2 pt-1">
+                                        <button x-show="order.status === 'PENDING' || order.status === 'RESERVED'" 
+                                                @click="confirmPaymentReport(order)"
+                                                :disabled="submitting"
+                                                type="button"
+                                                class="w-full py-3 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl transition shadow-xs active:scale-98 select-none-touch">
+                                            <span x-text="submitting ? 'Avisando organizador...' : 'Já fiz o Pix, Avisar Organizador'"></span>
+                                        </button>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <!-- Área administrativa do organizador -->
+        <div x-show="!loading && currentTab === 'admin'" x-cloak class="space-y-5">
+            <template x-if="!adminAuthenticated">
+                <div class="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 space-y-4 max-w-sm mx-auto shadow-xs">
+                    <div>
+                        <h1 class="text-lg font-extrabold text-zinc-900 dark:text-white">Área do Organizador</h1>
+                    </div>
+                    <form @submit.prevent="adminLogin()" class="space-y-3">
+                        <label for="admin-password" class="sr-only">Senha de acesso</label>
+                        <input id="admin-password" type="password" x-model="adminPassword" placeholder="Senha de acesso" autocomplete="current-password" required class="w-full px-3.5 py-3 text-sm rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                        <button type="submit" :disabled="submitting" class="w-full py-3 bg-zinc-900 dark:bg-emerald-600 text-white font-bold text-sm rounded-xl active:scale-98 transition select-none-touch">
+                            <span x-text="submitting ? 'Verificando...' : 'Acessar Painel'"></span>
+                        </button>
+                    </form>
+                </div>
+            </template>
+
+            <template x-if="adminAuthenticated">
+                <div class="space-y-5">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h1 class="text-lg font-extrabold text-zinc-900 dark:text-white">Gestão da Rifa</h1>
+                            <p class="text-xs text-zinc-500" x-text="adminStats.percentSold + '% concluído'"></p>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button @click="loadAdminData()" class="px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 select-none-touch">Atualizar</button>
+                            <button @click="adminLogout()" class="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 select-none-touch">Sair</button>
+                        </div>
+                    </div>
+
+
+                    <section class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                        <button @click="showConfigEditor = !showConfigEditor; if(showConfigEditor) loadConfigDraft()"
+                                class="w-full px-4 py-3 flex items-center justify-between text-left">
+                            <span class="text-sm font-extrabold text-zinc-900 dark:text-white">Configurar campanha</span>
+                            <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400" x-text="showConfigEditor ? 'Fechar' : 'Editar'"></span>
+                        </button>
+                        <div x-show="showConfigEditor" x-cloak class="p-4 pt-0 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
+                            <p x-show="lockCommercialConfig" class="mt-3 px-3 py-2.5 rounded-lg text-[11px] leading-relaxed text-amber-700 dark:text-amber-300 bg-amber-50/70 dark:bg-amber-950/20">Informações essenciais da campanha ficam bloqueadas automaticamente quando necessário, para preservar as condições anunciadas.</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300">Nome da campanha
+                                    <input x-model="adminConfigDraft.raffle_name" maxlength="80" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm">
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300">Prêmio
+                                    <input x-model="adminConfigDraft.prize" :disabled="lockCommercialConfig" maxlength="160" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm disabled:opacity-50">
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300">Valor por cota (R$)
+                                    <input x-model="adminConfigDraft.ticket_price" :disabled="lockCommercialConfig" inputmode="decimal" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm disabled:opacity-50">
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300">Quantidade de cotas
+                                    <input x-model="adminConfigDraft.number_count" :disabled="lockCommercialConfig" type="number" min="1" max="10000" step="1" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm disabled:opacity-50">
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300">Data do sorteio
+                                    <input x-model="adminConfigDraft.draw_date" @input="handleDrawDateInput($event)" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm">
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300">Chave Pix
+                                    <input x-model="adminConfigDraft.pix_key" maxlength="180" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm">
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300">Recebedor Pix
+                                    <input x-model="adminConfigDraft.pix_receiver" maxlength="120" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm">
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300">Banco
+                                    <input x-model="adminConfigDraft.pix_bank" maxlength="100" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm">
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300">WhatsApp do organizador
+                                    <input x-model="adminConfigDraft.whatsapp" @input="handleAdminWhatsappInput($event)" inputmode="numeric" maxlength="16" placeholder="(00) 90000-0000" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm">
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300 sm:col-span-2">Descrição (opcional)
+                                    <textarea x-model="adminConfigDraft.description" maxlength="1200" rows="3" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm"></textarea>
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300 sm:col-span-2">Imagem da campanha (URL)
+                                    <input x-model="adminConfigDraft.banner_url" maxlength="1000" placeholder="https://" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm">
+                                </label>
+                                <label class="text-xs font-bold text-zinc-600 dark:text-zinc-300 sm:col-span-2">Critério do sorteio (opcional)
+                                    <textarea x-model="adminConfigDraft.draw_rules" maxlength="3000" rows="3" class="mt-1 w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm"></textarea>
+                                </label>
+                            </div>
+                            <button @click="saveAdminConfig()" :disabled="submitting" class="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-sm font-extrabold">
+                                <span x-text="submitting ? 'Salvando...' : 'Salvar configuração'"></span>
+                            </button>
+                        </div>
+                    </section>
+
+                    <div class="p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-extrabold text-zinc-900 dark:text-white">Estado da campanha</p>
+                            <p class="text-xs text-zinc-500" x-text="campaignClosed ? 'Vendas encerradas' : 'Recebendo reservas'"></p>
+                        </div>
+                        <button x-show="!campaignClosed" @click="closeCampaign()" :disabled="submitting" class="px-3 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold">Encerrar vendas</button>
+                        <span x-show="config.campaign_status === 'DRAWN'" class="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">Sorteada</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div class="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                            <span class="text-[10px] font-extrabold uppercase text-zinc-500 block">Arrecadado (Pago)</span>
+                            <p class="text-base sm:text-lg font-black text-emerald-700 dark:text-emerald-400 mt-0.5" x-text="formatCurrency(adminStats.paidAmount)"></p>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                            <span class="text-[10px] font-extrabold uppercase text-zinc-500 block">A Receber (Reservado)</span>
+                            <p class="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 mt-0.5" x-text="formatCurrency(adminStats.reservedAmount)"></p>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                            <span class="text-[10px] font-extrabold uppercase text-zinc-500 block">Cotas Pagas</span>
+                            <p class="text-base sm:text-lg font-black text-zinc-900 dark:text-white mt-0.5">
+                                <span x-text="adminStats.paidCount"></span> <span class="text-xs font-normal text-zinc-500">/ <span x-text="numbers.length"></span></span>
+                            </p>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                            <span class="text-[10px] font-extrabold uppercase text-zinc-500 block">Aguardando Conferência</span>
+                            <p class="text-base sm:text-lg font-black text-sky-600 dark:text-sky-400 mt-0.5" x-text="adminStats.reportedCount"></p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button @click="generateWhatsappSummaryImage()" class="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 text-left transition active:scale-98 select-none-touch">
+                            <span class="text-[10px] font-extrabold uppercase text-zinc-500 block">Divulgação</span>
+                            <p class="font-bold text-xs mt-1 text-zinc-900 dark:text-white">Gerar Imagem</p>
+                        </button>
+                        <button @click="openRaffleDrawModal()" :disabled="config.campaign_status !== 'CLOSED' || !!config.draw_result" class="p-4 rounded-2xl disabled:opacity-40 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 text-left transition active:scale-98 select-none-touch">
+                            <span class="text-[10px] font-extrabold uppercase text-zinc-500 block">Apuração</span>
+                            <p class="font-bold text-xs mt-1 text-zinc-900 dark:text-white">Realizar Sorteio</p>
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="search" x-model="adminSearch" placeholder="Buscar por nome, WhatsApp ou cota..." class="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                            <select x-model="adminStatusFilter" class="custom-select px-3.5 py-2.5 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 font-semibold text-zinc-800 dark:text-zinc-200">
+                                <option value="ALL">Todos os status</option>
+                                <option value="RESERVED">Reservado</option>
+                                <option value="PAYMENT_REPORTED">Pagamento informado</option>
+                                <option value="PAID">Pedido confirmado</option>
+                                <option value="CANCELLED">Cancelado / Liberado</option>
+                                <option value="REFUNDED">Estornado / Liberado</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2.5">
+                            <template x-for="order in filteredAdminOrders" :key="order.order_id">
+                                <div class="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <strong class="text-sm font-bold text-zinc-900 dark:text-white" x-text="order.name"></strong>
+                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase"
+                                                      :class="{
+                                                          'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300': order.status === 'PENDING' || order.status === 'RESERVED',
+                                                          'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300': order.status === 'PAYMENT_REPORTED',
+                                                          'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300': order.status === 'PAID',
+                                                          'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400': order.status === 'CANCELLED' || order.status === 'REFUNDED'
+                                                      }" x-text="translateStatus(order.status)"></span>
+                                            </div>
+                                            <div class="text-xs text-zinc-600 dark:text-zinc-400 mt-1 space-y-0.5">
+                                                <p><span class="font-semibold text-zinc-500">WhatsApp:</span> <span x-text="formatPhoneDisplay(order.whatsapp || order.phone || order.telefone)"></span></p>
+                                                <p><span class="font-semibold text-zinc-500">Nº do pedido:</span> <span class="font-mono font-bold" x-text="shortenOrderId(order.order_id)"></span></p>
+                                            </div>
+                                        </div>
+                                        <strong class="text-sm font-extrabold text-zinc-900 dark:text-white" x-text="formatCurrency(order.total_amount)"></strong>
+                                    </div>
+
+                                    <div class="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 text-xs break-words font-semibold text-zinc-800 dark:text-zinc-200 border border-zinc-200/50 dark:border-zinc-800/50">
+                                        Cotas: <span x-text="order.numbers"></span>
+                                    </div>
+
+                                    <div x-show="order.status === 'PENDING' || order.status === 'RESERVED' || order.status === 'PAYMENT_REPORTED' || order.status === 'PAID'" class="flex items-center gap-2 pt-1">
+                                        <button x-show="order.status !== 'PAID'" @click="adminConfirmOrder(order.order_id)" :disabled="submitting" class="flex-1 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition select-none-touch">Confirmar pagamento</button>
+                                        <button @click="adminCancelOrder(order.order_id)" :disabled="submitting" class="px-3.5 py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 text-xs font-bold rounded-xl transition select-none-touch" x-text="order.status === 'PAID' ? 'Registrar estorno' : 'Liberar cotas'"></button>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <div x-show="filteredAdminOrders.length === 0" class="p-6 text-center text-xs text-zinc-500">
+                                Nenhum pedido localizado com os filtros selecionados.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
+                        <button @click="promptResetCampaign()" :disabled="submitting" class="text-xs font-bold text-rose-600 hover:underline select-none-touch">Iniciar Nova Campanha (Reset)</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+
+        <!-- Encerramento da campanha e resultado -->
+        <section x-show="!loading && currentTab === 'rifa' && campaignClosed" x-cloak
+                 class="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <div class="p-6 sm:p-8 text-center space-y-4">
+                <div class="w-16 h-16 mx-auto rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div class="space-y-1">
+                    <p class="text-xs font-extrabold uppercase tracking-widest text-emerald-700 dark:text-emerald-400"
+                       x-text="config.campaign_status === 'DRAWN' ? 'Campanha finalizada' : 'Vendas encerradas'"></p>
+                    <h1 class="text-2xl font-extrabold text-zinc-900 dark:text-white"
+                        x-text="config.campaign_status === 'DRAWN' ? 'Obrigado por participar!' : 'O resultado será publicado aqui após o sorteio.'"></h1>
+                    <p class="text-sm text-zinc-600 dark:text-zinc-400"
+                       x-text="config.campaign_status === 'DRAWN' ? 'O sorteio foi realizado. Confira quem ganhou:' : ''"></p>
+                </div>
+                <template x-if="config.draw_result">
+                    <div class="mt-5 p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-left space-y-3">
+                        <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 dark:text-emerald-300">Resultado do sorteio</p>
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 shrink-0 rounded-2xl bg-emerald-700 text-white flex items-center justify-center text-xl font-black" x-text="config.draw_result.number"></div>
+                            <div class="min-w-0">
+                                <p class="text-lg font-extrabold text-zinc-900 dark:text-white break-words" x-text="config.draw_result.buyerName"></p>
+                                <p class="text-xs text-zinc-600 dark:text-zinc-400">Cota vencedora</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-zinc-600 dark:text-zinc-400" x-text="'Sorteio realizado em ' + config.draw_result.timestamp"></p>
+                    </div>
+                </template>
+            </div>
+        </section>
+
+
+    </main>
+
+    <!-- Rodapé e acesso do organizador -->
+    <footer class="border-t border-zinc-200 dark:border-zinc-800 py-6 text-center text-[11px] text-zinc-500">
+        <div class="max-w-xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>Rifa Solidária</span>
+            <button @click="switchTab('admin')" class="font-bold flex items-center gap-1.5 hover:text-zinc-900 dark:hover:text-zinc-100 transition select-none-touch">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <span>Área do organizador</span>
+            </button>
+        </div>
+    </footer>
+
+    <!-- Resumo das cotas selecionadas -->
+    <div x-show="currentTab === 'rifa' && selectedNumbers.length > 0"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="translate-y-full"
+         x-transition:enter-end="translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="translate-y-0"
+         x-transition:leave-end="translate-y-full"
+         x-cloak
+         class="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 shadow-2xl pb-safe">
+        <div class="max-w-xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div>
+                <p class="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">
+                    <strong class="text-zinc-900 dark:text-white" x-text="selectedNumbers.length"></strong> cota(s) marcada(s)
+                </p>
+                <p class="text-lg font-black text-emerald-700 dark:text-emerald-400 leading-tight" x-text="formatCurrency(selectedNumbers.length * (config.ticket_price || 0))"></p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button @click="selectedNumbers = []" class="px-3 py-2.5 text-xs font-bold text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white select-none-touch">Limpar</button>
+                <button @click="showCheckoutModal = true" class="px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm rounded-xl shadow-md transition active:scale-95 select-none-touch">Continuar</button>
+            </div>
+        </div>
     </div>
 
-    <p style="font-size: 12px; color: #64748b; text-align: center; margin-bottom: 18px; line-height: 1.5;">
-      Copie a chave Pix acima, realize o pagamento no aplicativo do seu banco e clique no botão verde para enviar o aviso ao organizador.
-    </p>
+    <!-- Confirmação da reserva -->
+    <div x-show="showCheckoutModal" x-cloak class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-zinc-950/60 backdrop-blur-xs p-0 sm:p-4">
+        <div @click.away="showCheckoutModal = false" role="dialog" aria-modal="true" aria-labelledby="checkout-title" class="bg-white dark:bg-zinc-900 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-4 border border-zinc-200 dark:border-zinc-800 pb-safe shadow-2xl">
+            <div class="flex items-center justify-between">
+                <h3 id="checkout-title" class="text-base font-extrabold text-zinc-900 dark:text-white">Confirmar reserva</h3>
+                <button type="button" @click="showCheckoutModal = false" aria-label="Fechar confirmação da reserva" class="p-1 text-zinc-500 hover:text-zinc-700 font-bold select-none-touch">✕</button>
+            </div>
 
-    <button class="primary" onclick="reportPayment()" style="background: #059669; margin-bottom: 10px;">Já fiz o Pix, Avisar Organizador</button>
-    <button class="admin-link" onclick="location.reload()">Voltar ao início</button>
-  </div>
+            <div class="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs space-y-1">
+                <p class="text-zinc-600 dark:text-zinc-400">Cotas selecionadas (<span x-text="selectedNumbers.length"></span>):</p>
+                <p class="font-bold text-zinc-900 dark:text-white break-words" x-text="selectedNumbers.slice().sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).join(', ')"></p>
+                <p class="pt-1 text-sm font-extrabold text-emerald-700 dark:text-emerald-400">Total: <span x-text="formatCurrency(selectedNumbers.length * (config.ticket_price || 0))"></span></p>
+            </div>
 
-  <script src="app.js"></script>
+            <form @submit.prevent="submitReservation()" class="space-y-3.5">
+                <div>
+                    <label for="buyer-name" class="block text-xs font-bold text-zinc-800 dark:text-zinc-200 mb-1">Seu nome</label>
+                    <input id="buyer-name" type="text" autocomplete="name" x-model="buyerName" required placeholder="Ex.: Maria dos Santos" class="w-full px-3.5 py-3 text-sm rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 focus:outline-none">
+                </div>
+                <div>
+                    <label for="buyer-whatsapp" class="block text-xs font-bold text-zinc-800 dark:text-zinc-200 mb-1">Seu WhatsApp</label>
+                    <input id="buyer-whatsapp" type="tel" inputmode="numeric" maxlength="16" autocomplete="tel" x-model="buyerWhatsapp" @input="handlePhoneInput($event)" required placeholder="(71) 99999-9999" class="w-full px-3.5 py-3 text-sm rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 focus:outline-none">
+                </div>
+
+                <button type="submit" :disabled="submitting" class="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-extrabold text-sm rounded-xl transition shadow-md active:scale-98 select-none-touch">
+                    <span x-text="submitting ? 'Preparando reserva...' : 'Confirmar reserva'"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Regulamento da campanha -->
+    <div x-show="showRulesModal" x-cloak class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-zinc-950/60 backdrop-blur-xs p-0 sm:p-4">
+        <div @click.away="showRulesModal = false" role="dialog" aria-modal="true" aria-labelledby="rules-title" class="bg-white dark:bg-zinc-900 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-4 border border-zinc-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto pb-safe shadow-2xl">
+            <div class="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <h3 id="rules-title" class="text-base font-extrabold text-zinc-900 dark:text-white">Regulamento da Rifa</h3>
+                <button type="button" @click="showRulesModal = false" aria-label="Fechar regulamento" class="p-1 text-zinc-500 font-bold select-none-touch">✕</button>
+            </div>
+            <div class="space-y-3 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                <p x-show="config.prize"><strong>Prêmio:</strong> <span x-text="config.prize"></span></p>
+                <div class="space-y-1">
+                    <strong>Data do sorteio:</strong>
+                    <p x-text="config.draw_date ? formatDrawDate(config.draw_date) : 'O sorteio será realizado após a venda de todas as cotas.'"></p>
+                </div>
+                <div>
+                    <strong>Critério do sorteio:</strong>
+                    <p class="whitespace-pre-line mt-1" x-text="config.draw_rules || defaultDrawRules"></p>
+                </div>
+                <div x-show="config.whatsapp" class="w-full border-t border-zinc-100 dark:border-zinc-800 pt-3">
+                    <a :href="buildOrganizerWhatsappLink()" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold hover:underline">
+                        <span>Falar com o organizador pelo WhatsApp ↗</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultado e registro do sorteio -->
+    <div x-show="showDrawModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/70 backdrop-blur-xs p-4">
+        <div role="dialog" aria-modal="true" aria-labelledby="draw-title" class="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-3xl p-6 space-y-4 border border-zinc-200 dark:border-zinc-800 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <h3 id="draw-title" class="text-base font-extrabold text-zinc-900 dark:text-white">Sorteio</h3>
+                <button type="button" @click="showDrawModal = false" aria-label="Fechar sorteio" class="p-1 text-zinc-500 font-bold select-none-touch">✕</button>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs space-y-1">
+                <p><strong>Cotas que participarão:</strong> <span class="font-bold text-emerald-700 dark:text-emerald-400" x-text="eligiblePaidNumbers.length"></span></p>
+                <p class="text-zinc-500 text-[11px]">Participam apenas as cotas com pagamento confirmado.</p>
+            </div>
+
+            <template x-if="drawResult">
+                <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-center space-y-1.5">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Número sorteado</span>
+                    <p class="text-3xl font-black text-zinc-900 dark:text-white" x-text="drawResult.number"></p>
+                    <p class="text-xs font-bold text-zinc-800 dark:text-zinc-200" x-text="'Ganhador(a): ' + drawResult.buyerName"></p>
+                    <p class="text-[10px] font-mono text-zinc-500" x-text="drawResult.timestamp"></p>
+                </div>
+            </template>
+
+            <button x-show="!drawResult && config.campaign_status !== 'DRAWN'" @click="executeAuditableDraw()" :disabled="submitting || eligiblePaidNumbers.length === 0" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 text-white font-extrabold text-xs rounded-xl shadow-xs transition active:scale-98 select-none-touch">
+                <span x-text="submitting ? 'Realizando sorteio...' : (drawResult ? 'Sortear Novamente' : 'Realizar Sorteio Agora')"></span>
+            </button>
+        </div>
+    </div>
+
+    <canvas id="shareCanvas" width="1080" height="1920" class="hidden"></canvas>
+
+    <!-- Lógica da interface -->
+    <script src="assets/js/config.js"></script>
+    <script defer src="assets/js/app.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 </body>
 </html>
