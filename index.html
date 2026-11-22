@@ -169,7 +169,7 @@
                     <div class="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                         <div class="flex justify-between items-center text-xs font-semibold">
                             <span class="text-zinc-600 dark:text-zinc-400">Progresso da campanha</span>
-                            <span class="text-emerald-700 dark:text-emerald-400 font-extrabold" x-text="percentSold + '% das cotas pagas'"></span>
+                            <span class="text-emerald-700 dark:text-emerald-400 font-extrabold" x-text="percentSold + '% concluído'"></span>
                         </div>
                         <div class="w-full h-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                             <div class="h-full bg-emerald-600 dark:bg-emerald-500 rounded-full transition-all duration-500" :style="'width: ' + percentSold + '%'"></div>
@@ -417,7 +417,7 @@
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h1 class="text-lg font-extrabold text-zinc-900 dark:text-white">Gestão da Rifa</h1>
-                            <p class="text-xs text-zinc-500" x-text="adminStats.percentSold + '% concluído'"></p>
+                            <p class="text-xs text-zinc-500" x-text="adminStats.percentSold + '% das cotas pagas'"></p>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <button @click="loadAdminData()" class="px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 select-none-touch">Atualizar</button>
