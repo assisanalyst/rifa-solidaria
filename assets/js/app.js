@@ -810,69 +810,366 @@ function raffleApp() {
             }
         },
 
-        generateWhatsappSummaryImage() {
+        async generateWhatsappSummaryImage() {
             const canvas = document.getElementById('shareCanvas');
             if (!canvas) return;
+
+            if (!Array.isArray(this.numbers) || this.numbers.length === 0) {
+                this.notify('Não há cotas carregadas para gerar a imagem.', 'error');
+                return;
+            }
+
+            if (document.fonts && document.fonts.ready) {
+                try {
+                    await document.fonts.ready;
+                } catch (_) {}
+            }
+
             const ctx = canvas.getContext('2d');
+            const totalNumbers = this.numbers.length;
+            const chunkSize = 100;
+            const allSlices = [];
 
-            const grad = ctx.createLinearGradient(0, 0, 0, 1920);
-            grad.addColorStop(0, '#064e3b');
-            grad.addColorStop(1, '#022c22');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, 1080, 1920);
+            for (let i = 0; i < totalNumbers; i += chunkSize) {
+                const items = this.numbers.slice(i, i + chunkSize);
+                const counts = { available: 0, reserved: 0, paid: 0 };
 
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.font = 'bold 54px Plus Jakarta Sans, sans-serif';
-            ctx.fillText(this.config.raffle_name || 'RIFA SOLIDÁRIA', 540, 180);
+                items.forEach(item => {
+                    const cat = this.classifyQuotaForShare(item.status);
+                    counts[cat]++;
+                });
 
-            ctx.font = '800 68px Plus Jakarta Sans, sans-serif';
-            ctx.fillStyle = '#4ade80';
-            ctx.fillText(this.config.prize || 'Grande Prêmio Beneficente', 540, 280);
+                allSlices.push({
+                    index: allSlices.length + 1,
+                    items,
+                    firstNumber: items[0].number,
+                    lastNumber: items[items.length - 1].number,
+                    counts
+                });
+            }
 
-            ctx.font = '600 40px Plus Jakarta Sans, sans-serif';
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText(`Cota: ${this.formatCurrency(this.config.ticket_price)} | Chave Pix: ${this.config.pix_key || ''}`, 540, 370);
+            const totalPages = allSlices.length;
+            const hasAnyAvailable = allSlices.some(slice => slice.counts.available > 0);
+            const slicesToExport = hasAnyAvailable
+                ? allSlices.filter(slice => slice.counts.available > 0)
+                : allSlices;
 
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.roundRect(80, 440, 920, 1260, 40);
-            ctx.fill();
+            const skippedPages = totalPages - slicesToExport.length;
+            const raffleName = String(this.config.raffle_name || this.config.title || 'Rifa Solidária').trim();
+            const priceText = `${this.formatCurrency(this.config.ticket_price)} por cota`;
+            const organizerPhone = this.config.whatsapp ? this.formatPhoneDisplay(this.config.whatsapp) : '';
+            const slugBase = this.normalizeText(raffleName).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'rifa';
 
-            ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 42px Plus Jakarta Sans, sans-serif';
-            ctx.fillText(`COTAS LIVRES ATUALIZADAS (${this.availableCount} DISPONÍVEIS)`, 540, 520);
+            const now = new Date();
+            const timestampText = `Atualizado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 
-            const availableNumbers = this.numbers.filter(n => n.status === 'AVAILABLE').slice(0, 60);
-            let x = 140, y = 600, col = 0;
-            availableNumbers.forEach(item => {
-                ctx.fillStyle = '#f0fdf4';
+            const palette = {
+                outerBg: '#fafafa',       // zinc-50
+                cardBg: '#ffffff',        // white
+                cardBorder: '#e4e4e7',    // zinc-200
+                divider: '#f4f4f5',       // zinc-100
+                textPrimary: '#18181b',   // zinc-900
+                textSecondary: '#52525b', // zinc-600
+                textMuted: '#71717a',     // zinc-500
+                emeraldBg: '#ecfdf5',     // emerald-50
+                emeraldBorder: '#a7f3d0', // emerald-200
+                emeraldText: '#065f46',   // emerald-800
+                emeraldSolid: '#047857',  // emerald-700
+                availBg: '#ffffff',
+                availBorder: '#a1a1aa',   // zinc-300
+                availText: '#18181b',     // zinc-900
+                resBg: '#fffbeb',         // amber-50
+                resBorder: '#fcd34d',     // amber-300
+                resText: '#92400e',       // amber-800
+                paidBg: '#f4f4f5',        // zinc-100
+                paidBorder: '#ededf0',    // zinc-200
+                paidText: '#b4b4bc'       // zinc-400
+            };
+
+            const fontFamily = '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif';
+            const canvasWidth = 1080;
+            const outerMargin = 48;
+            const cardX = outerMargin;
+            const cardY = outerMargin;
+            const cardW = canvasWidth - outerMargin * 2; // 984
+            const innerPad = 48;
+            const contentX = cardX + innerPad;
+            const contentW = cardW - innerPad * 2; // 888
+
+            const cols = 10;
+            const gap = 10;
+            const cellSize = Math.floor((contentW - gap * (cols - 1)) / cols); // 79px
+            const gridTotalW = cellSize * cols + gap * (cols - 1);
+            const gridStartX = contentX + Math.floor((contentW - gridTotalW) / 2);
+
+            for (let i = 0; i < slicesToExport.length; i++) {
+                const slice = slicesToExport[i];
+                const rows = Math.ceil(slice.items.length / cols);
+                const gridH = rows * cellSize + (rows - 1) * gap;
+
+                const headerH = 228;
+                const statusBarH = 92;
+                const footerH = 118;
+                const cardH = headerH + statusBarH + gridH + footerH + 36;
+                const canvasHeight = cardH + outerMargin * 2;
+
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
+
+                ctx.fillStyle = palette.outerBg;
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+                ctx.fillStyle = palette.cardBg;
                 ctx.beginPath();
-                ctx.roundRect(x - 45, y - 40, 110, 70, 14);
+                ctx.roundRect(cardX, cardY, cardW, cardH, 32);
                 ctx.fill();
-
-                ctx.strokeStyle = '#059669';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = palette.cardBorder;
                 ctx.stroke();
 
-                ctx.fillStyle = '#065f46';
-                ctx.font = 'bold 36px Plus Jakarta Sans, sans-serif';
-                ctx.fillText(item.number, x + 10, y + 8);
+                let cursorY = cardY + 46;
 
-                col++;
-                x += 160;
-                if (col >= 5) { col = 0; x = 140; y += 95; }
-            });
+                ctx.font = `800 24px ${fontFamily}`;
+                const priceMetrics = ctx.measureText(priceText);
+                const badgePadX = 22;
+                const badgeH = 46;
+                const badgeW = Math.ceil(priceMetrics.width + badgePadX * 2);
 
-            ctx.fillStyle = '#0f172a';
-            ctx.font = 'bold 38px Plus Jakarta Sans, sans-serif';
-            ctx.fillText(`Para reservar, chame no WhatsApp: ${this.config.whatsapp || ''}`, 540, 1800);
+                ctx.fillStyle = palette.emeraldBg;
+                ctx.beginPath();
+                ctx.roundRect(contentX, cursorY, badgeW, badgeH, 999);
+                ctx.fill();
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = palette.emeraldBorder;
+                ctx.stroke();
 
-            const link = document.createElement('a');
-            link.download = `cotas-livres-${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            this.notify('Imagem gerada e pronta para compartilhar no WhatsApp.', 'success');
+                ctx.fillStyle = palette.emeraldText;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(priceText, contentX + badgePadX, cursorY + badgeH / 2 + 1);
+
+                if (totalPages > 1) {
+                    const pageLabel = `Faixa ${slice.index} de ${totalPages}`;
+                    ctx.font = `700 23px ${fontFamily}`;
+                    const pageMetrics = ctx.measureText(pageLabel);
+                    const pagePillW = Math.ceil(pageMetrics.width + 32);
+
+                    ctx.fillStyle = palette.divider;
+                    ctx.beginPath();
+                    ctx.roundRect(contentX + contentW - pagePillW, cursorY, pagePillW, badgeH, 999);
+                    ctx.fill();
+
+                    ctx.fillStyle = palette.textSecondary;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(pageLabel, contentX + contentW - pagePillW / 2, cursorY + badgeH / 2 + 1);
+                }
+
+                cursorY += badgeH + 26;
+                let titleFontSize = 44;
+                ctx.font = `800 ${titleFontSize}px ${fontFamily}`;
+                while (ctx.measureText(raffleName).width > contentW && titleFontSize > 30) {
+                    titleFontSize -= 2;
+                    ctx.font = `800 ${titleFontSize}px ${fontFamily}`;
+                }
+                ctx.fillStyle = palette.textPrimary;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText(raffleName, contentX, cursorY);
+
+                cursorY += titleFontSize + 12;
+                ctx.font = `600 26px ${fontFamily}`;
+                ctx.fillStyle = palette.textSecondary;
+                ctx.fillText(`Números ${slice.firstNumber} a ${slice.lastNumber}`, contentX, cursorY);
+
+                const barY = cardY + headerH;
+                ctx.fillStyle = palette.outerBg;
+                ctx.beginPath();
+                ctx.roundRect(contentX, barY, contentW, statusBarH, 18);
+                ctx.fill();
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = palette.cardBorder;
+                ctx.stroke();
+
+                const legendItems = [
+                    {
+                        label: 'Disponíveis',
+                        count: slice.counts.available,
+                        bg: palette.availBg,
+                        border: palette.availBorder,
+                        countColor: palette.textPrimary,
+                        strike: false
+                    },
+                    {
+                        label: 'Reservadas',
+                        count: slice.counts.reserved,
+                        bg: palette.resBg,
+                        border: palette.resBorder,
+                        countColor: palette.resText,
+                        strike: false
+                    },
+                    {
+                        label: 'Pagas',
+                        count: slice.counts.paid,
+                        bg: palette.paidBg,
+                        border: palette.paidBorder,
+                        countColor: palette.textMuted,
+                        strike: true
+                    }
+                ];
+
+                const colWidth = contentW / 3;
+                legendItems.forEach((leg, idx) => {
+                    const blockX = contentX + idx * colWidth;
+                    const centerY = barY + statusBarH / 2;
+
+                    if (idx > 0) {
+                        ctx.strokeStyle = palette.cardBorder;
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(blockX, barY + 18);
+                        ctx.lineTo(blockX, barY + statusBarH - 18);
+                        ctx.stroke();
+                    }
+
+                    const swatchSize = 26;
+                    const swatchX = blockX + 26;
+                    const swatchY = centerY - swatchSize / 2;
+
+                    ctx.fillStyle = leg.bg;
+                    ctx.beginPath();
+                    ctx.roundRect(swatchX, swatchY, swatchSize, swatchSize, 7);
+                    ctx.fill();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = leg.border;
+                    ctx.stroke();
+
+                    if (leg.strike) {
+                        ctx.strokeStyle = palette.paidText;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(swatchX + 6, centerY);
+                        ctx.lineTo(swatchX + swatchSize - 6, centerY);
+                        ctx.stroke();
+                    }
+
+                    const textStartX = swatchX + swatchSize + 14;
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = `800 28px ${fontFamily}`;
+                    ctx.fillStyle = leg.countColor;
+                    const countStr = String(leg.count);
+                    ctx.fillText(countStr, textStartX, centerY + 1);
+
+                    const countW = ctx.measureText(countStr).width;
+                    ctx.font = `600 22px ${fontFamily}`;
+                    ctx.fillStyle = palette.textSecondary;
+                    ctx.fillText(leg.label, textStartX + countW + 8, centerY + 1);
+                });
+
+                const gridStartY = barY + statusBarH + 28;
+                const maxDigits = String(slice.lastNumber).length;
+                const cellFontSize = maxDigits >= 4 ? 22 : 26;
+
+                slice.items.forEach((item, idx) => {
+                    const row = Math.floor(idx / cols);
+                    const col = idx % cols;
+                    const x = gridStartX + col * (cellSize + gap);
+                    const y = gridStartY + row * (cellSize + gap);
+                    const category = this.classifyQuotaForShare(item.status);
+
+                    let bg = palette.availBg;
+                    let border = palette.availBorder;
+                    let textColor = palette.availText;
+                    let fontWeight = '800';
+                    let lineWidth = 2;
+
+                    if (category === 'reserved') {
+                        bg = palette.resBg;
+                        border = palette.resBorder;
+                        textColor = palette.resText;
+                        fontWeight = '700';
+                        lineWidth = 2;
+                    } else if (category === 'paid') {
+                        bg = palette.paidBg;
+                        border = palette.paidBorder;
+                        textColor = palette.paidText;
+                        fontWeight = '600';
+                        lineWidth = 1;
+                    }
+
+                    ctx.fillStyle = bg;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, cellSize, cellSize, 14);
+                    ctx.fill();
+
+                    ctx.lineWidth = lineWidth;
+                    ctx.strokeStyle = border;
+                    ctx.stroke();
+
+                    const label = String(item.number);
+                    ctx.font = `${fontWeight} ${cellFontSize}px ${fontFamily}`;
+                    ctx.fillStyle = textColor;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(label, x + cellSize / 2, y + cellSize / 2 + 1);
+
+                    if (category === 'paid') {
+                        const numW = ctx.measureText(label).width;
+                        const strikeW = Math.min(numW + 8, cellSize - 18);
+                        ctx.strokeStyle = palette.paidText;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x + (cellSize - strikeW) / 2, y + cellSize / 2);
+                        ctx.lineTo(x + (cellSize + strikeW) / 2, y + cellSize / 2);
+                        ctx.stroke();
+                    }
+                });
+
+                const footerTopY = gridStartY + gridH + 28;
+                ctx.strokeStyle = palette.cardBorder;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(contentX, footerTopY);
+                ctx.lineTo(contentX + contentW, footerTopY);
+                ctx.stroke();
+
+                const ctaY = footerTopY + 38;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.font = `700 24px ${fontFamily}`;
+                ctx.fillStyle = palette.textPrimary;
+                const ctaText = organizerPhone
+                    ? `Escolha seu número livre e peça pelo WhatsApp: ${organizerPhone}`
+                    : 'Escolha seu número livre e envie mensagem para reservar.';
+                ctx.fillText(ctaText, contentX, ctaY);
+
+                ctx.font = `500 21px ${fontFamily}`;
+                ctx.fillStyle = palette.textMuted;
+                ctx.fillText(timestampText, contentX, ctaY + 34);
+
+                const fileName = `${slugBase}-${slice.firstNumber}-${slice.lastNumber}.png`;
+                const dataUrl = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                if (i < slicesToExport.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 250));
+                }
+            }
+
+            const totalGenerated = slicesToExport.length;
+            const summaryMsg = totalGenerated === 1
+                ? 'Imagem gerada e pronta para compartilhar no WhatsApp.'
+                : `${totalGenerated} imagens geradas por faixa e prontas para compartilhar no WhatsApp.`;
+            const skippedNote = skippedPages > 0
+                ? ` (${skippedPages} faixa(s) esgotada(s) omitida(s))`
+                : '';
+
+            this.notify(summaryMsg + skippedNote, 'success');
         },
 
         translateStatus(status) {
