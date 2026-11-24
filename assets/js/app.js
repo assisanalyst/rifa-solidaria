@@ -863,6 +863,7 @@ function raffleApp() {
             const now = new Date();
             const timestampText = `Atualizado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 
+            // Tokens visuais extraídos diretamente da interface (index.html / Tailwind Zinc + Emerald + Amber)
             const palette = {
                 outerBg: '#fafafa',       // zinc-50
                 cardBg: '#ffffff',        // white
@@ -916,9 +917,11 @@ function raffleApp() {
                 canvas.width = canvasWidth;
                 canvas.height = canvasHeight;
 
+                // Fundo externo limpo
                 ctx.fillStyle = palette.outerBg;
                 ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
+                // Cartão principal (espelha section.bg-white.rounded-3xl.border-zinc-200)
                 ctx.fillStyle = palette.cardBg;
                 ctx.beginPath();
                 ctx.roundRect(cardX, cardY, cardW, cardH, 32);
@@ -927,8 +930,10 @@ function raffleApp() {
                 ctx.strokeStyle = palette.cardBorder;
                 ctx.stroke();
 
+                // 1. Cabeçalho: Badge de valor + Paginação + Título + Faixa
                 let cursorY = cardY + 46;
 
+                // Badge do valor da cota (espelha span.bg-emerald-50.border-emerald-200.text-emerald-800)
                 ctx.font = `800 24px ${fontFamily}`;
                 const priceMetrics = ctx.measureText(priceText);
                 const badgePadX = 22;
@@ -948,6 +953,7 @@ function raffleApp() {
                 ctx.textBaseline = 'middle';
                 ctx.fillText(priceText, contentX + badgePadX, cursorY + badgeH / 2 + 1);
 
+                // Indicador de faixa/página à direita (quando houver mais de 100 cotas)
                 if (totalPages > 1) {
                     const pageLabel = `Faixa ${slice.index} de ${totalPages}`;
                     ctx.font = `700 23px ${fontFamily}`;
@@ -964,6 +970,7 @@ function raffleApp() {
                     ctx.fillText(pageLabel, contentX + contentW - pagePillW / 2, cursorY + badgeH / 2 + 1);
                 }
 
+                // Título da campanha (ajuste automático para títulos longos)
                 cursorY += badgeH + 26;
                 let titleFontSize = 44;
                 ctx.font = `800 ${titleFontSize}px ${fontFamily}`;
@@ -976,11 +983,13 @@ function raffleApp() {
                 ctx.textBaseline = 'top';
                 ctx.fillText(raffleName, contentX, cursorY);
 
+                // Subtítulo com o intervalo exato da faixa
                 cursorY += titleFontSize + 12;
                 ctx.font = `600 26px ${fontFamily}`;
                 ctx.fillStyle = palette.textSecondary;
                 ctx.fillText(`Números ${slice.firstNumber} a ${slice.lastNumber}`, contentX, cursorY);
 
+                // 2. Barra de resumo + legenda dos 3 status
                 const barY = cardY + headerH;
                 ctx.fillStyle = palette.outerBg;
                 ctx.beginPath();
@@ -1022,6 +1031,7 @@ function raffleApp() {
                     const blockX = contentX + idx * colWidth;
                     const centerY = barY + statusBarH / 2;
 
+                    // Divisória vertical sutil entre os 3 indicadores
                     if (idx > 0) {
                         ctx.strokeStyle = palette.cardBorder;
                         ctx.lineWidth = 1.5;
@@ -1031,6 +1041,7 @@ function raffleApp() {
                         ctx.stroke();
                     }
 
+                    // Amostra fiel da célula da grade
                     const swatchSize = 26;
                     const swatchX = blockX + 26;
                     const swatchY = centerY - swatchSize / 2;
@@ -1052,6 +1063,7 @@ function raffleApp() {
                         ctx.stroke();
                     }
 
+                    // Número da contagem + rótulo
                     const textStartX = swatchX + swatchSize + 14;
                     ctx.textAlign = 'left';
                     ctx.textBaseline = 'middle';
@@ -1066,6 +1078,7 @@ function raffleApp() {
                     ctx.fillText(leg.label, textStartX + countW + 8, centerY + 1);
                 });
 
+                // 3. Grade central de cotas (10 colunas)
                 const gridStartY = barY + statusBarH + 28;
                 const maxDigits = String(slice.lastNumber).length;
                 const cellFontSize = maxDigits >= 4 ? 22 : 26;
@@ -1113,6 +1126,7 @@ function raffleApp() {
                     ctx.textBaseline = 'middle';
                     ctx.fillText(label, x + cellSize / 2, y + cellSize / 2 + 1);
 
+                    // Traço discreto apenas nas pagas (espelha line-through da interface)
                     if (category === 'paid') {
                         const numW = ctx.measureText(label).width;
                         const strikeW = Math.min(numW + 8, cellSize - 18);
@@ -1125,6 +1139,7 @@ function raffleApp() {
                     }
                 });
 
+                // 4. Rodapé limpo para compartilhamento no WhatsApp
                 const footerTopY = gridStartY + gridH + 28;
                 ctx.strokeStyle = palette.cardBorder;
                 ctx.lineWidth = 1.5;
@@ -1147,6 +1162,7 @@ function raffleApp() {
                 ctx.fillStyle = palette.textMuted;
                 ctx.fillText(timestampText, contentX, ctaY + 34);
 
+                // Exportação do arquivo PNG da faixa
                 const fileName = `${slugBase}-${slice.firstNumber}-${slice.lastNumber}.png`;
                 const dataUrl = canvas.toDataURL('image/png');
                 const link = document.createElement('a');
@@ -1170,6 +1186,26 @@ function raffleApp() {
                 : '';
 
             this.notify(summaryMsg + skippedNote, 'success');
+        },
+
+        classifyQuotaForShare(status) {
+            const normalized = String(status || '').toUpperCase().trim();
+            if (normalized === 'PAID') return 'paid';
+            if (normalized === 'PENDING' || normalized === 'RESERVED' || normalized === 'PAYMENT_REPORTED') {
+                return 'reserved';
+            }
+            // AVAILABLE, CANCELLED e REFUNDED representam cotas livres na grade
+            return 'available';
+        },
+
+        classifyQuotaForShare(status) {
+            const normalized = String(status || '').toUpperCase().trim();
+            if (normalized === 'PAID') return 'paid';
+            if (normalized === 'PENDING' || normalized === 'RESERVED' || normalized === 'PAYMENT_REPORTED') {
+                return 'reserved';
+            }
+            // AVAILABLE, CANCELLED e REFUNDED representam cotas livres na grade
+            return 'available';
         },
 
         translateStatus(status) {
